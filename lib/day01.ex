@@ -2,6 +2,7 @@ defmodule Day01 do
   @moduledoc """
   Part 1 - How many measurements are larger than the previous measurement?
   Part 2 - How many sums are larger than the previous sum?
+
   See https://adventofcode.com/2021/day/1
   """
 
@@ -22,7 +23,7 @@ def puzzle_input do
    "lib/day01_input.txt"
    |> File.read!()
 end
-#  
+
  @doc """
   :input "199 200 ... 
   :output [199, 200, ...]
