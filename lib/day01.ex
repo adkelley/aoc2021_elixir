@@ -2,6 +2,7 @@ defmodule Day01 do
   @moduledoc """
   Part 1 - How many measurements are larger than the previous measurement?
   Part 2 - How many sums are larger than the previous sum?
+  See https://adventofcode.com/2021/day/1
   """
 
  @sample """
@@ -17,6 +18,11 @@ defmodule Day01 do
   263
   """
 
+def puzzle_input do
+   "lib/day01_input.txt"
+   |> File.read!()
+end
+#  
  @doc """
   :input "199 200 ... 
   :output [199, 200, ...]
@@ -36,7 +42,8 @@ defmodule Day01 do
 
   """
   def part1 do
-    @sample
+    #@sample
+    puzzle_input
     |> parse_input
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.count(fn [left, right] -> right > left end)
@@ -50,7 +57,8 @@ defmodule Day01 do
 
   """
   def part2 do
-    @sample
+    #@sample
+    puzzle_input
     |> parse_input
     |> Enum.chunk_every(3, 1, :discard)
     |> Enum.map(&Enum.sum/1)
