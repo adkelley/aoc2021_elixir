@@ -11,9 +11,6 @@ defmodule Aoc2021 do
     """
   end
 
-  # import Day01, only: [part1: 1, part2: 1]
-  # import Day02, only: [part1: 1, part2: 1]
-
   @spec main(list()) :: :ok
   def main(args) do
     if unix?() do
@@ -26,19 +23,12 @@ defmodule Aoc2021 do
   defp call([arg]) when arg in ["--help", "-h"], do: display_help()
   defp call([arg]) when arg in ["--version", "-v"], do: display_version()
 
-  # TODO: Break this down further
-  @invalid_day_arg :invalid_day_arg
-
-  defp call([day | _args]) do
-    with true <- natural_number?(day),
-         true <- advent_day?(day),
-         {:ok, {f1, f2}} <- get_solve_fns(day),
-         {:ok, input} <- load_input(day),
-         {:ok, {s1, s2}} <- {:ok, {f1.(input), f2.(input)}} do
+  defp call([arg | _args]) do
+    with {:ok, day} <- valid_day_arg?(arg),
+         {:ok, {s1, s2}} <- find_solutions_for_day(day) do
       display_solution(s1, s2, day)
     else
-      false -> display_reason(@invalid_day_arg)
-      {:error, reason} -> display_reason(reason, day)
+      {:error, reason} -> display_reason(reason, arg)
     end
   end
 
@@ -58,6 +48,17 @@ defmodule Aoc2021 do
     IO.puts("\n Advent of Code 2021 #{@app_version}")
   end
 
+  @invalid_day_arg :invalid_day_arg
+
+  @spec valid_day_arg?(String.t()) :: boolean()
+  defp valid_day_arg?(arg) do
+    if natural_number?(arg) && advent_day?(arg) do
+      {:ok, arg}
+    else
+      {:error, @invalid_day_arg}
+    end
+  end
+
   @spec natural_number?(String.t()) :: boolean()
   defp natural_number?(s) do
     String.to_charlist(s) |> Enum.map(fn c -> c > 47 && c < 58 end) |> Enum.all?()
@@ -68,13 +69,23 @@ defmodule Aoc2021 do
     String.to_integer(day) |> Kernel.then(fn day -> day > 0 && day < 26 end)
   end
 
+  defp find_solutions_for_day(day) do
+    with {:ok, {f1, f2}} <- get_solve_fns(day),
+         {:ok, input} <- load_input(day),
+         {:ok, {s1, s2}} <- {:ok, {f1.(input), f2.(input)}} do
+      {:ok, {s1, s2}}
+    end
+  end
+
+
   @missing_session_token :missing_session_token
   @failed_to_cache_input :failed_to_cache_input
+  @day_not_implemented :day_not_implemented
 
-  defp display_reason(reason) do
+  defp display_reason(reason, day) do
     case reason do
       @invalid_day_arg ->
-        IO.ANSI.format([:red, "The day argument must be a natural number from 1-25\n"])
+        IO.ANSI.format([:red, "Invalid day argument '#{day}'. Choose a natural number from 1-25\n"])
         |> IO.puts()
 
       @missing_session_token ->
@@ -91,23 +102,13 @@ defmodule Aoc2021 do
         ])
         |> IO.puts()
 
-      _ ->
-        IO.puts("Undefined Error")
-    end
-  end
-
-  @day_not_implemented :day_not_implemented
-  defp display_reason(reason, day) do
-    case reason do
       @day_not_implemented ->
         IO.ANSI.format([:red, "The solution for day #{day} hasn't been implemented.\n"])
         |> IO.puts()
 
       _ ->
-        IO.inspect(reason)
+        IO.puts("Undefined Error")
     end
-
-    IO.write(usage())
   end
 
   @aoc_year "2021"
@@ -126,10 +127,10 @@ defmodule Aoc2021 do
     end
   end
 
-
   defp load_input(day) do
     case load_input_from_cache(day) do
-      {:ok, input} -> {:ok, input}
+      {:ok, input} ->
+        {:ok, input}
 
       _ ->
         with :ok <- create_cache_dir_if_missing(),
@@ -170,7 +171,6 @@ defmodule Aoc2021 do
     end
   end
 
-
   defp save_input_to_cache(day, input) do
     cache_path = Path.join(@input_cache_dir, input_filename(day))
 
@@ -194,20 +194,10 @@ defmodule Aoc2021 do
 
   defp fetch_input(session_token, day) do
     url = "https://adventofcode.com/#{@aoc_year}/day/#{day}/input"
-    # url = "http://example.com"
     headers = [
+      {~c"user-agent", ~c"github.com/adkelley/aoc2021_elixir"},
       {~c"cookie", String.to_charlist("session=#{session_token}")}
     ]
-
-    # case :httpc.request(
-    #        :get,
-    #        {~c"https://adventofcode.com/#{@aoc_year}/day/#{day}/input", headers},
-    #        [],
-    #        []
-    #      ) do
-    #   {:ok, {{~c"HTTP/1.1", 200, ~c"OK"}, _, input}} -> {:ok, input}
-    #   {:error, _} -> {:error, "Bad HTTP Request"}
-    # end
 
     case HTTPoison.get(url, headers) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->

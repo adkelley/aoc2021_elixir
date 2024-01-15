@@ -9,15 +9,6 @@ defmodule Day02 do
   See https://adventofcode.com/2021/day/2
   """
 
-  @sample """
-  forward 5
-  down 5
-  forward 8
-  up 3
-  down 8
-  forward 2
-  """
-
   def puzzle_input() do
     "lib/day02_input.txt"
     |> File.read!()
@@ -43,15 +34,9 @@ defmodule Day02 do
   :output x = position * depth
   """
 
-<<<<<<< HEAD
-  def part1 do
-    # @sample
-    puzzle_input()
-=======
   def part1(input) do
     # @sample
     input
->>>>>>> Refactor-main
     |> parse_input()
     |> Enum.reduce({_position = 0, _depth = 0}, fn
       {:forward, value}, {depth, position} -> {depth, position + value}
@@ -67,15 +52,9 @@ defmodule Day02 do
   :output x = position * depth
   """
 
-<<<<<<< HEAD
-  def part2 do
-    # @sample
-    puzzle_input()
-=======
   def part2(input) do
     # @sample
     input
->>>>>>> Refactor-main
     |> parse_input()
     |> Enum.reduce({_position = 0, _depth = 0, _aim = 0}, fn
       {:forward, value}, {depth, position, aim} -> {depth + aim * value, position + value, aim}
@@ -87,43 +66,27 @@ defmodule Day02 do
   end
 end
 
-ExUnit.start()
+if Mix.env() == :test do
+  defmodule Day02Test do
+    use ExUnit.Case, async: true
 
-defmodule Day02Test do
-  use ExUnit.Case
+    import Day02
 
-  import Day02
+    @sample """
+    forward 5
+    down 5
+    forward 8
+    up 3
+    down 8
+    forward 2
+    """
 
-  @sample """
-  forward 5
-  down 5
-  forward 8
-  up 3
-  down 8
-  forward 2
-  """
+    test "part1" do
+      assert part1(@sample) === "150"
+    end
 
-  test "part1" do
-    assert part1(@sample) === "150"
-  end
-
-  test "part2" do
-    assert part2(@sample) === "900"
-  end
-end
-
-ExUnit.start()
-
-defmodule Day02Test do
-  use ExUnit.Case
-
-  import Day02
-
-  test "part1" do
-    assert part1() === 1_882_980
-  end
-
-  test "part2" do
-    assert part2() === 1_971_232_560
+    test "part2" do
+      assert part2(@sample) === "900"
+    end
   end
 end
