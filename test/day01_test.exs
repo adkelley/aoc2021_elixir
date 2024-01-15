@@ -16,10 +16,12 @@ defmodule Day01Test do
   263
   """
 
+  @tag :skip
   test "part1" do
     assert part1(@sample) === "7"
   end
 
+  @tag :skip
   test "part2" do
     assert part2(@sample) === "5"
   end

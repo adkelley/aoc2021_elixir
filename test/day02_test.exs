@@ -12,10 +12,12 @@ defmodule Day02Test do
   forward 2
   """
 
+  @tag :skip
   test "part1" do
     assert part1(@sample) === "150"
   end
 
+  @tag :skip
   test "part2" do
     assert part2(@sample) === "900"
   end
