@@ -1,4 +1,4 @@
-defmodule Aoc2021 do
+defmodule AocCli do
   def usage() do
     """
     Advent of Code 2021

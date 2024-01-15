@@ -6,7 +6,7 @@ defmodule Aoc2021.MixProject do
 
   def project do
     [
-      app: :aoc_2021,
+      app: :aoc_cli,
       description: @description,
       version: @version,
       elixir: "~> 1.16.0",
@@ -25,7 +25,7 @@ defmodule Aoc2021.MixProject do
 
   defp escript do
     [
-      main_module: Aoc2021,
+      main_module: AocCli,
       include_executables: true,
       include_erts: true
     ]
