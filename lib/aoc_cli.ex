@@ -1,4 +1,19 @@
 defmodule AocCli do
+  @type day() :: String.t()
+  @type input() :: String.t()
+  @type session_cookie() :: String.t()
+  @type solution() :: String.t()
+  @type solutions() :: {solution(), solution()}
+  @type puzzle() :: (String.t() -> String.t())
+  @type puzzles() :: {puzzle(), puzzle()}
+  @type reason() :: atom()
+  @type error() :: {:error, reason() }
+  @type ok_solutions() :: {:ok, solutions()}
+  @type ok_puzzles() :: {:ok, puzzles()}
+  @type ok_session_cookie() :: {:ok, session_cookie()}
+  @type ok_input() :: {:ok, input()}
+  @type ok()    :: {:ok, atom()}
+
   def usage() do
     """
     Advent of Code 2021
@@ -23,10 +38,11 @@ defmodule AocCli do
   defp call([arg]) when arg in ["--help", "-h"], do: display_help()
   defp call([arg]) when arg in ["--version", "-v"], do: display_version()
 
+  @spec call(list()) :: :ok
   defp call([arg | _args]) do
     with {:ok, day} <- valid_day_arg?(arg),
-         {:ok, {s1, s2}} <- find_solutions_for_day(day) do
-      display_solution(s1, s2, day)
+         {:ok, solutions} <- find_solutions_for_day(day) do
+      display_solutions_for_day(solutions, day)
     else
       {:error, reason} -> display_reason(reason, arg)
     end
@@ -50,39 +66,39 @@ defmodule AocCli do
 
   @invalid_day_arg :invalid_day_arg
 
-  @spec valid_day_arg?(String.t()) :: {atom(), String.t()} | {atom(), atom()}
-  defp valid_day_arg?(arg) do
-    if natural_number?(arg) && advent_day?(arg) do
-      {:ok, arg}
+  @spec valid_day_arg?(day()) :: ok() | error()
+  defp valid_day_arg?(day) do
+    if natural_number?(day) && advent_day?(day) do
+      {:ok, day}
     else
       {:error, @invalid_day_arg}
     end
   end
 
-  @spec natural_number?(String.t()) :: boolean()
+  @spec natural_number?(day()) :: boolean()
   defp natural_number?(s) do
     String.to_charlist(s) |> Enum.map(fn c -> c > 47 && c < 58 end) |> Enum.all?()
   end
 
-  @spec advent_day?(String.t()) :: boolean()
+  @spec advent_day?(day()) :: boolean()
   defp advent_day?(day) do
     String.to_integer(day) |> Kernel.then(fn day -> day > 0 && day < 26 end)
   end
 
-  @spec find_solutions_for_day(String.t()) ::
-          {atom(), {String.t(), String.t()}} | {atom(), atom()}
+  @spec find_solutions_for_day(day()) :: ok_solutions() | error()
   defp find_solutions_for_day(day) do
-    with {:ok, {f1, f2}} <- get_solve_fns(day),
+    with {:ok, {f1, f2}} <- get_puzzle_fns(day),
          {:ok, input} <- load_input(day),
-         {:ok, {s1, s2}} <- {:ok, {f1.(input), f2.(input)}} do
-      {:ok, {s1, s2}}
+         {:ok, solutions} <- {:ok, {f1.(input), f2.(input)}} do
+      {:ok, solutions}
     end
   end
 
-  @missing_session_token :missing_session_token
+  @missing_session_cookie :missing_session_cookie
   @failed_to_cache_input :failed_to_cache_input
   @day_not_implemented :day_not_implemented
 
+  @spec display_reason(reason(), day()) :: :ok
   defp display_reason(reason, day) do
     case reason do
       @invalid_day_arg ->
@@ -92,10 +108,10 @@ defmodule AocCli do
         ])
         |> IO.puts()
 
-      @missing_session_token ->
+      @missing_session_cookie ->
         IO.ANSI.format([
           :red,
-          "You have not exported your session token to an environment variable. Check the README for instructions.\n"
+          "You have not exported your session cookie to an environment variable. Check the README for instructions.\n"
         ])
         |> IO.puts()
 
@@ -116,14 +132,15 @@ defmodule AocCli do
   end
 
   @aoc_year "2021"
-  defp display_solution(s1, s2, day) do
+  @spec display_solutions_for_day(solutions(), day()) :: :ok
+  defp display_solutions_for_day({s1, s2}, day) do
     IO.puts("Advent of Code #{@aoc_year} solutions for day #{day}:")
     Util.insert_commas(s1) |> then(fn s -> IO.puts("Result for part 1: #{s}") end)
     Util.insert_commas(s2) |> then(fn s -> IO.puts("Result for part 2: #{s}") end)
   end
 
-  @spec get_solve_fns(String.t()) :: {atom(), tuple() | atom()}
-  defp get_solve_fns(day) do
+  @spec get_puzzle_fns(day()) :: ok_puzzles() | error()
+  defp get_puzzle_fns(day) do
     case day do
       "1" -> {:ok, {&Day01.part1/1, &Day01.part2/1}}
       "2" -> {:ok, {&Day02.part1/1, &Day02.part2/1}}
@@ -131,82 +148,87 @@ defmodule AocCli do
     end
   end
 
+  @input_cache_dir ".input"
+  @saved_puzzle_input :saved_puzzle_input
+
+  @spec load_input(day()) :: ok_input() | error()
   defp load_input(day) do
     case load_input_from_cache(day) do
       {:ok, input} ->
         {:ok, input}
 
       _ ->
-        with :ok <- create_cache_dir_if_missing(),
+        with {:ok, @input_cache_dir} <- create_cache_dir_if_missing(),
              # get the input from the internet
              {:ok, input} <- fetch_input_from_internet(day),
              # Write it to the cache directory
-             :ok <- save_input_to_cache(day, input) do
+             {:ok, @saved_puzzle_input} <- save_input_to_cache(day, input) do
           {:ok, input}
         end
     end
   end
 
-  @input_cache_dir ".input"
   @input_file_ext ".aocinput"
 
-  @spec input_filename(String.t()) :: String.t()
+  @spec input_filename(day()) :: String.t()
   defp input_filename(day), do: day <> @input_file_ext
 
-  @spec load_input_from_cache(String.t()) :: {atom(), String.t() | atom()}
+  @spec load_input_from_cache(day()) :: {:ok, binary()} | error()
   defp load_input_from_cache(day) do
     path_to_file = Path.join([@input_cache_dir, input_filename(day)])
     File.read(path_to_file)
   end
 
   # This will create a local cache.  If the user wants a symbolic link to a
-  # global cache, then they should create that prior to running this cli
-  @spec create_cache_dir_if_missing() :: atom() | {atom(), atom()}
+  # global cache, then they should create that link prior to running this cli
+  @spec create_cache_dir_if_missing() :: ok() | error()
   defp create_cache_dir_if_missing() do
     if File.dir?(@input_cache_dir) do
-      :ok
+      {:ok, @input_cache_dir}
     else
       case File.mkdir(@input_cache_dir) do
-        :ok -> :ok
+        :ok -> {:ok, @input_cache_dir}
         {:error, _} -> {:error, @failed_to_cache_input}
       end
     end
   end
 
+  @spec fetch_input_from_internet(day()) :: ok_input() | error()
   defp fetch_input_from_internet(day) do
-    with {:ok, session_token} <- load_session_token(),
-         {:ok, input} <- fetch_input(session_token, day) do
+    with {:ok, session_cookie} <- load_session_cookie(),
+         {:ok, input} <- fetch_input(session_cookie, day) do
       {:ok, input}
     end
   end
 
-  @spec save_input_to_cache(String.t(), String.t()) :: atom() | {atom(), atom()}
+  @spec save_input_to_cache(day(), input()) :: ok() | error()
   defp save_input_to_cache(day, input) do
     cache_path = Path.join(@input_cache_dir, input_filename(day))
 
     case File.write(cache_path, input) do
-      :ok -> :ok
+      :ok -> {:ok, @saved_puzzle_input}
       _ -> {:error, @failed_to_cache_input}
     end
   end
 
-  @session_env_var "ADVENT_OF_CODE_SESSION_TOKEN"
+  @session_env_var "ADVENT_OF_CODE_SESSION_COOKIE"
 
-  @spec load_session_token() :: tuple()
-  defp load_session_token() do
-    if session_token = System.get_env(@session_env_var) do
-      {:ok, session_token}
+  @spec load_session_cookie() :: ok_session_cookie() | error()
+  defp load_session_cookie() do
+    if session_cookie = System.get_env(@session_env_var) do
+      {:ok, session_cookie}
     else
-      {:error, @missing_session_token}
+      {:error, @missing_session_cookie}
     end
   end
 
-  defp fetch_input(session_token, day) do
+  @spec fetch_input(session_cookie(), day()) :: ok() | error()
+  defp fetch_input(session_cookie, day) do
     url = "https://adventofcode.com/#{@aoc_year}/day/#{day}/input"
 
     headers = [
       {~c"user-agent", ~c"github.com/adkelley/aoc2021_elixir"},
-      {~c"cookie", String.to_charlist("session=#{session_token}")}
+      {~c"cookie", String.to_charlist("session=#{session_cookie}")}
     ]
 
     case HTTPoison.get(url, headers) do
